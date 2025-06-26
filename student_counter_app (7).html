@@ -1,0 +1,20 @@
+// 수정된 getSavedOrder 함수 포함 전체 코드 유지
+function getSavedOrder() {
+  const saved = localStorage.getItem("seatOrder");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      // 숫자 배열이면 인덱스로 변환
+      if (Array.isArray(parsed) && typeof parsed[0] === 'number') {
+        return parsed.map(i => defaultStudents[i] || `학생${i + 1}`);
+      }
+      // 문자열 배열이면 그대로 사용
+      if (Array.isArray(parsed) && parsed.every(i => typeof i === 'string')) {
+        return parsed;
+      }
+    } catch (e) {}
+  }
+  return [...defaultStudents];
+}
+
+// 그 외 기존 코드 유지
