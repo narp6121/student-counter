@@ -1,0 +1,220 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1학년 1반 참여도</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.png">
+  <style>
+    body { font-family: sans-serif; background: #f0f4f8; padding: 20px; margin: 0; }
+    h1 { text-align: center; margin-bottom: 10px; }
+    .top-controls, .period-buttons { text-align: center; margin-bottom: 15px; }
+    .top-controls input, .period-buttons button, .top-controls button.reset {
+      font-size: 16px; padding: 6px 12px; margin: 4px; border: none; border-radius: 4px; cursor: pointer;
+    }
+    .period-buttons button.active { background: #007bff; color: white; }
+    .top-controls button.reset { background: #dc3545; color: white; }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    @media (max-width: 600px) {
+      .grid-container { grid-template-columns: repeat(3, 1fr); }
+    }
+    .student-card {
+      background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px;
+      display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: move;
+      transition: border 0.3s;
+    }
+    .student-card.unspoken { border: 2px solid #1e90ff; }
+    .name { font-weight: bold; margin-bottom: 10px; }
+    .score-buttons, .score-display {
+      display: flex; gap: 10px; margin-bottom: 5px;
+    }
+    .score-buttons button, .score-display button {
+      flex: 1; padding: 6px; min-width: 50px; font-size: 14px;
+      border: none; border-radius: 4px; cursor: pointer;
+    }
+    .score-display button { background: #e6f0ff; font-weight: bold; }
+    .score-display button:hover { background: #cce0ff; }
+  </style>
+</head>
+<body>
+  <h1>1학년 1반 참여도</h1>
+  <div class="top-controls">
+    <input type="date" id="datePicker">
+    <button class="reset" onclick="resetAllScores()">점수 초기화</button>
+  </div>
+  <div class="period-buttons" id="periodButtons"></div>
+  <div class="grid-container" id="studentGrid"></div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+
+    const defaultStudents = [
+      "김지애", "박지효", "배라은", "이해나", "임재인",
+      "정나예", "최이쁨", "한지윤", "김유온", "김주빈",
+      "김채우", "나하성", "명승주", "박채민", "신채담",
+      "최서빈", "최여울", "하로아"
+    ];
+    const periods = ["1교시", "2교시", "3교시", "4교시", "5교시", "전체"];
+    let currentPeriod = "1교시";
+
+    const dateInput = document.getElementById("datePicker");
+    const grid = document.getElementById("studentGrid");
+    const periodButtons = document.getElementById("periodButtons");
+    dateInput.value = new Date().toISOString().split('T')[0];
+
+    periods.forEach(period => {
+      const btn = document.createElement("button");
+      btn.textContent = period;
+      btn.onclick = () => {
+        currentPeriod = period;
+        document.querySelectorAll(".period-buttons button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        render();
+      };
+      if (period === currentPeriod) btn.classList.add("active");
+      periodButtons.appendChild(btn);
+    });
+
+    function getSavedOrder() {
+      const saved = localStorage.getItem("seatOrder");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && typeof parsed[0] === 'string') return parsed;
+        } catch (e) {}
+      }
+      return [...defaultStudents];
+    }
+
+    function saveOrder(order) {
+      localStorage.setItem("seatOrder", JSON.stringify(order));
+    }
+
+    function getKey(name, type, period) {
+      const date = dateInput.value;
+      return `score_${date}_${period}_${name}_${type}`;
+    }
+
+    function getScore(name, type) {
+      if (currentPeriod === "전체") {
+        return ["1교시", "2교시", "3교시", "4교시", "5교시"].reduce((sum, p) => {
+          return sum + parseInt(localStorage.getItem(getKey(name, type, p)) || 0);
+        }, 0);
+      } else {
+        return parseInt(localStorage.getItem(getKey(name, type, currentPeriod)) || 0);
+      }
+    }
+
+    function setScore(name, type, value) {
+      if (currentPeriod !== "전체") {
+        localStorage.setItem(getKey(name, type, currentPeriod), value);
+      }
+    }
+
+    function updateDisplay(name) {
+      ["발표", "경청", "지도"].forEach(type => {
+        const score = getScore(name, type);
+        document.getElementById(`${name}_${type}`).textContent = score;
+      });
+    }
+
+    function resetAllScores() {
+      defaultStudents.forEach(name => {
+        ["발표", "경청", "지도"].forEach(type => {
+          if (currentPeriod === "전체") {
+            ["1교시", "2교시", "3교시", "4교시", "5교시"].forEach(p => {
+              localStorage.setItem(getKey(name, type, p), 0);
+            });
+          } else {
+            localStorage.setItem(getKey(name, type, currentPeriod), 0);
+          }
+        });
+      });
+      render();
+    }
+
+    let students = getSavedOrder();
+
+    function render() {
+      grid.innerHTML = "";
+      students.forEach((name, index) => {
+        const card = document.createElement("div");
+        card.className = "student-card";
+        card.setAttribute("draggable", true);
+        card.dataset.index = index;
+        if (getScore(name, "발표") === 0) {
+          card.classList.add("unspoken");
+        }
+
+        card.ondragstart = e => e.dataTransfer.setData("text/plain", index);
+        card.ondragover = e => e.preventDefault();
+        card.ondrop = e => {
+          e.preventDefault();
+          const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
+          const toIndex = parseInt(card.dataset.index);
+          [students[fromIndex], students[toIndex]] = [students[toIndex], students[fromIndex]];
+          saveOrder(students);
+          render();
+        };
+
+        const nameTag = document.createElement("div");
+        nameTag.className = "name";
+        nameTag.textContent = name;
+        card.appendChild(nameTag);
+
+        const btnRow = document.createElement("div");
+        btnRow.className = "score-buttons";
+        ["발표", "경청", "지도"].forEach(type => {
+          const btn = document.createElement("button");
+          btn.textContent = type;
+          btn.style.backgroundColor = type === "발표" ? "#1e90ff" : type === "경청" ? "#28a745" : "#6f42c1";
+          btn.style.color = "white";
+          btn.onclick = () => {
+            const current = getScore(name, type);
+            setScore(name, type, current + 1);
+            updateDisplay(name);
+            render();
+          };
+          btnRow.appendChild(btn);
+        });
+        card.appendChild(btnRow);
+
+        const scoreRow = document.createElement("div");
+        scoreRow.className = "score-display";
+        ["발표", "경청", "지도"].forEach(type => {
+          const scoreBtn = document.createElement("button");
+          scoreBtn.id = `${name}_${type}`;
+          scoreBtn.textContent = getScore(name, type);
+          scoreBtn.onclick = () => {
+            const current = getScore(name, type);
+            if (current > 0) {
+              setScore(name, type, current - 1);
+              updateDisplay(name);
+              render();
+            }
+          };
+          scoreRow.appendChild(scoreBtn);
+        });
+        card.appendChild(scoreRow);
+
+        grid.appendChild(card);
+      });
+    }
+
+    dateInput.addEventListener("change", render);
+    render();
+  </script>
+</body>
+</html>
