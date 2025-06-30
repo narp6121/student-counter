@@ -50,26 +50,36 @@
       });
     }
 
-    const students = [
-      "김지애", "박지효", "배라은", "이해나", "임재인",
-      "정나예", "최이쁨", "한지윤", "김유온", "김주빈",
-      "김채우", "나하성", "명승주", "박채민", "신채담",
-      "최서빈", "최여울", "하로아"
-    ];
-
-    const studentGrid = document.getElementById("studentGrid");
-    const popup = document.getElementById("popup");
-    const periodTabs = document.querySelectorAll(".period-btn");
-    const datePicker = document.getElementById("datePicker");
-    let currentPeriod = "1교시";
-    let dragIndex = null;
-
-    function getStorageKey(date, period) {
-      return `scores_${date}_${period}`;
-    }
+       let students = [];
 
     function getTodayDate() {
       return datePicker.value || new Date().toISOString().split("T")[0];
+    }
+
+    function getStudentOrderKey(date) {
+      return `student_order_${date}`;
+    }
+
+    function loadStudents() {
+      const saved = localStorage.getItem(getStudentOrderKey(getTodayDate()));
+      if (saved) {
+        students = JSON.parse(saved);
+      } else {
+        students = [
+          "김지애", "박지효", "배라은", "이해나", "임재인",
+          "정나예", "최이쁨", "한지윤", "김유온", "김주빈",
+          "김채우", "나하성", "명승주", "박채민", "신채담",
+          "최서빈", "최여울", "하로아"
+        ];
+      }
+    }
+
+    function saveStudentOrder() {
+      localStorage.setItem(getStudentOrderKey(getTodayDate()), JSON.stringify(students));
+    }
+
+    function getStorageKey(date, period) {
+      return `scores_${date}_${period}`;
     }
 
     function loadScores() {
@@ -122,6 +132,7 @@
     }
 
     function renderStudents() {
+      loadStudents();
       const scores = currentPeriod === "전체" ? loadTotalScores() : loadScores();
       studentGrid.innerHTML = "";
       students.forEach((name, index) => {
@@ -151,6 +162,7 @@
           if (dragIndex !== null && dragIndex !== index) {
             [students[dragIndex], students[index]] = [students[index], students[dragIndex]];
             [scores[dragIndex], scores[index]] = [scores[index], scores[dragIndex]];
+            saveStudentOrder();
             if (currentPeriod !== "전체") saveScores(scores);
             renderStudents();
             dragIndex = null;
@@ -159,6 +171,13 @@
         studentGrid.appendChild(div);
       });
     }
+
+    const studentGrid = document.getElementById("studentGrid");
+    const popup = document.getElementById("popup");
+    const periodTabs = document.querySelectorAll(".period-btn");
+    const datePicker = document.getElementById("datePicker");
+    let currentPeriod = "1교시";
+    let dragIndex = null;
 
     document.querySelectorAll(".period-btn").forEach(btn => {
       btn.onclick = () => {
@@ -181,3 +200,4 @@
   </script>
 </body>
 </html>
+
