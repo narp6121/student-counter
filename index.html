@@ -21,20 +21,20 @@
       white-space: nowrap;
     }
     @media (max-width: 480px) {
-      #periodTabs button {
-        font-size: 0.65rem;
-        padding: 0.25rem 0.5rem;
-      }
       .popup-buttons {
         flex-direction: column;
         align-items: center;
       }
     }
+    .selected-card {
+      outline: 3px solid #60a5fa;
+      outline-offset: 2px;
+    }
   </style>
 </head>
 <body class="bg-gradient-to-b from-slate-50 to-slate-100 min-h-screen p-4 touch-manipulation">
   <div class="flex justify-between items-center max-w-screen-md mx-auto mb-4">
-    <h1 class="text-xl font-bold text-slate-800">1학년 1반 v2</h1>
+    <h1 class="text-xl font-bold text-slate-800">1학년 1반 v3</h1>
     <div class="flex gap-2 items-center">
       <input type="date" id="datePicker" class="border rounded px-2 py-1 text-sm shadow-sm" />
       <select id="subjectSelect" class="border rounded px-2 py-1 text-sm shadow-sm">
@@ -50,7 +50,7 @@
     <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="3교시">3교시</button>
     <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="4교시">4교시</button>
     <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="5교시">5교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="전체">전체</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-blue-500 text-white" data-period="전체">전체</button>
   </div>
 
   <div id="studentGrid" class="grid grid-cols-5 gap-3 max-w-screen-md mx-auto"></div>
@@ -63,9 +63,28 @@
       });
     }
 
-    let students = [];
-    let currentPeriod = "1교시";
+    const defaultStudents = ["김지애", "박지효", "배라은", "이해나", "임재인", "정나예", "최이쁨", "한지윤", "김유온", "김주빈", "김채우", "나하성", "명승주", "박채민", "신채담", "최서빈", "최여울", "하로아"];
+    let students = getSavedOrder();
+    let currentPeriod = "전체";
+    let selectedCard = null;
     let dragIndex = null;
+
+    function getSavedOrder() {
+      const saved = localStorage.getItem("seatOrder");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.every(n => typeof n === 'string')) {
+            return parsed;
+          }
+        } catch {}
+      }
+      return [...defaultStudents];
+    }
+
+    function saveStudentOrder() {
+      localStorage.setItem("seatOrder", JSON.stringify(students));
+    }
 
     function getTodayDate() {
       return document.getElementById("datePicker").value || new Date().toISOString().split("T")[0];
@@ -84,39 +103,6 @@
     function saveScores(scores) {
       const key = getStorageKey(getTodayDate(), currentPeriod);
       localStorage.setItem(key, JSON.stringify(scores));
-    }
-
-    function getStudentOrderHistory() {
-      return JSON.parse(localStorage.getItem("student_order_history") || "[]");
-    }
-
-    function setStudentOrderHistory(history) {
-      localStorage.setItem("student_order_history", JSON.stringify(history));
-    }
-
-    function loadStudents() {
-      const today = getTodayDate();
-      const history = getStudentOrderHistory();
-      const applicable = history.filter(h => h.date <= today).pop();
-      if (applicable) {
-        students = applicable.order;
-      } else {
-        students = [
-          "김지애", "박지효", "배라은", "이해나", "임재인",
-          "정나예", "최이쁨", "한지윤", "김유온", "김주빈",
-          "김채우", "나하성", "명승주", "박채민", "신채담",
-          "최서빈", "최여울", "하로아"
-        ];
-      }
-    }
-
-    function saveStudentOrderForToday() {
-      const today = getTodayDate();
-      let history = getStudentOrderHistory();
-      history = history.filter(h => h.date !== today);
-      history.push({ date: today, order: students });
-      history.sort((a, b) => new Date(a.date) - new Date(b.date));
-      setStudentOrderHistory(history);
     }
 
     function loadTotalScores() {
@@ -159,7 +145,6 @@
     }
 
     function renderStudents() {
-      loadStudents();
       const scores = currentPeriod === "전체" ? loadTotalScores() : loadScores();
       const studentGrid = document.getElementById("studentGrid");
       studentGrid.innerHTML = "";
@@ -182,16 +167,19 @@
         `;
         div.onclick = (e) => openPopup(index, e);
         div.setAttribute("draggable", true);
+
         div.addEventListener("dragstart", () => dragIndex = index);
         div.addEventListener("dragover", e => e.preventDefault());
         div.addEventListener("drop", () => {
           if (dragIndex !== null && dragIndex !== index) {
             [students[dragIndex], students[index]] = [students[index], students[dragIndex]];
-            saveStudentOrderForToday();
+            saveStudentOrder();
             renderStudents();
             dragIndex = null;
           }
         });
+
+        // 아이패드용 터치 드래그
         div.addEventListener("touchstart", (e) => {
           dragIndex = index;
         });
@@ -203,26 +191,30 @@
             const dropIndex = Array.from(studentGrid.children).indexOf(dropDiv);
             if (dragIndex !== null && dropIndex !== -1 && dragIndex !== dropIndex) {
               [students[dragIndex], students[dropIndex]] = [students[dropIndex], students[dragIndex]];
-              saveStudentOrderForToday();
+              saveStudentOrder();
               renderStudents();
               dragIndex = null;
             }
           }
         });
+
         studentGrid.appendChild(div);
       });
     }
 
-    function closePopupOnOutsideClick(e) {
+    // 팝업 외부 클릭 시 닫기
+    document.addEventListener("click", (e) => {
       const popup = document.getElementById("popup");
-      setTimeout(() => {
-        if (popup.style.display === "block" && !popup.contains(e.target)) {
-          popup.style.display = "none";
-        }
-      }, 0);
-    }
-    document.addEventListener("click", closePopupOnOutsideClick);
-    document.addEventListener("touchstart", closePopupOnOutsideClick);
+      if (popup.style.display === "block" && !popup.contains(e.target)) {
+        popup.style.display = "none";
+      }
+    });
+    document.addEventListener("touchstart", (e) => {
+      const popup = document.getElementById("popup");
+      if (popup.style.display === "block" && !popup.contains(e.target)) {
+        popup.style.display = "none";
+      }
+    });
 
     document.querySelectorAll(".period-btn").forEach(btn => {
       btn.onclick = () => {
@@ -236,7 +228,7 @@
     });
 
     document.getElementById("saveOrderBtn").addEventListener("click", () => {
-      saveStudentOrderForToday();
+      saveStudentOrder();
       alert("자리 순서가 저장되었습니다.");
     });
 
@@ -244,7 +236,6 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("datePicker").value = getTodayDate();
-      loadStudents();
       renderStudents();
     });
   </script>
