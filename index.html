@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
   <style>
     .popup {
-      position: absolute;
+      position: fixed;
       background: white;
       border-radius: 1rem;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -19,6 +19,11 @@
       max-width: 160px;
       font-size: 0.7rem;
       white-space: nowrap;
+      word-break: keep-all;
+    }
+
+    .popup.visible {
+      display: block;
     }
 
     @media (max-width: 480px) {
@@ -41,12 +46,12 @@
     </div>
   </div>
   <div class="flex justify-center mb-4 gap-1 flex-wrap text-xs sm:text-sm" id="periodTabs">
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="1교시">1교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="2교시">2교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="3교시">3교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="4교시">4교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="5교시">5교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="전체">전체</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="1교시">1교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="2교시">2교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="3교시">3교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="4교시">4교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="5교시">5교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="전체">전체</button>
   </div>
   <div id="studentGrid" class="grid grid-cols-5 gap-3 max-w-screen-md mx-auto"></div>
   <div id="popup" class="popup"></div>
