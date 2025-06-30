@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>1학년 1반</title>
+  <title>1학년 1반 V9 </title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
@@ -20,13 +20,11 @@
       font-size: 0.7rem;
       white-space: nowrap;
     }
-
     @media (max-width: 480px) {
       #periodTabs button {
         font-size: 0.65rem;
         padding: 0.25rem 0.5rem;
       }
-
       .popup-buttons {
         flex-direction: column;
         align-items: center;
@@ -34,7 +32,7 @@
     }
   </style>
 </head>
-<body class="bg-gradient-to-b from-slate-50 to-slate-100 min-h-screen p-4">
+<body class="bg-gradient-to-b from-slate-50 to-slate-100 min-h-screen p-4 touch-manipulation">
   <div class="flex justify-between items-center max-w-screen-md mx-auto mb-4">
     <h1 class="text-xl font-bold text-slate-800">1학년 1반</h1>
     <div class="flex gap-2 items-center">
@@ -198,6 +196,17 @@
       });
     }
 
+    function closePopupOnOutsideClick(e) {
+      const popup = document.getElementById("popup");
+      setTimeout(() => {
+        if (popup.style.display === "block" && !popup.contains(e.target)) {
+          popup.style.display = "none";
+        }
+      }, 0);
+    }
+    document.addEventListener("click", closePopupOnOutsideClick);
+    document.addEventListener("touchstart", closePopupOnOutsideClick);
+
     document.querySelectorAll(".period-btn").forEach(btn => {
       btn.onclick = () => {
         currentPeriod = btn.dataset.period;
@@ -217,19 +226,10 @@
     document.getElementById("datePicker").addEventListener("change", renderStudents);
 
     document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("datePicker").value = getTodayDate();
-  loadStudents();
+      document.getElementById("datePicker").value = getTodayDate();
+      loadStudents();
       renderStudents();
     });
-
-    function closePopupOnOutsideClick(e) {
-  const popup = document.getElementById("popup");
-  if (popup.style.display === "block" && !popup.contains(e.target)) {
-    popup.style.display = "none";
-  }
-}
-document.addEventListener("click", closePopupOnOutsideClick);
-document.addEventListener("touchstart", closePopupOnOutsideClick);
   </script>
 </body>
 </html>
