@@ -217,7 +217,8 @@
     document.getElementById("datePicker").addEventListener("change", renderStudents);
 
     document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("datePicker").value = getTodayDate();
+  document.getElementById("datePicker").value = getTodayDate();
+  loadStudents();
       renderStudents();
     });
 
