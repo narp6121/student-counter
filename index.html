@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>1학년 1반</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.png" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"/>
   <style>
     .popup {
-      position: fixed;
+      position: absolute;
       background: white;
       border-radius: 1rem;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -19,11 +19,6 @@
       max-width: 160px;
       font-size: 0.7rem;
       white-space: nowrap;
-      word-break: keep-all;
-    }
-
-    .popup.visible {
-      display: block;
     }
 
     @media (max-width: 480px) {
@@ -53,18 +48,17 @@
     <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="5교시">5교시</button>
     <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="전체">전체</button>
   </div>
+
   <div id="studentGrid" class="grid grid-cols-5 gap-3 max-w-screen-md mx-auto"></div>
   <div id="popup" class="popup"></div>
-  
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('service-worker.js');
       });
     }
-  </script>
 
-  <script>
     let students = [];
     let currentPeriod = "1교시";
     let dragIndex = null;
@@ -136,12 +130,17 @@
     function openPopup(index, e) {
       e.stopPropagation();
       const rect = e.target.getBoundingClientRect();
+      const popup = document.getElementById("popup");
+      const popupWidth = 160;
+      const screenRightEdge = window.innerWidth;
+      const overflows = rect.left + popupWidth > screenRightEdge;
+
       popup.style.top = rect.bottom + window.scrollY + "px";
-      popup.style.left = rect.left + window.scrollX + "px";
+      popup.style.left = (overflows ? rect.right - popupWidth : rect.left) + window.scrollX + "px";
       popup.style.display = "block";
       popup.innerHTML = `
         <h2 class="font-bold text-gray-800 mb-1 text-center truncate">${students[index]}</h2>
-        <div class="flex gap-2 justify-center">
+        <div class="grid grid-cols-1 gap-2">
           <button onclick="addScore(${index}, '발표')" class="border border-blue-500 text-blue-500 hover:bg-blue-100 px-2 py-1 rounded-md text-xs">발표</button>
           <button onclick="addScore(${index}, '경청')" class="border border-green-500 text-green-500 hover:bg-green-100 px-2 py-1 rounded-md text-xs">경청</button>
           <button onclick="addScore(${index}, '지도')" class="border border-red-500 text-red-500 hover:bg-red-100 px-2 py-1 rounded-md text-xs">지도</button>
@@ -194,10 +193,6 @@
       });
     }
 
-    const studentGrid = document.getElementById("studentGrid");
-    const popup = document.getElementById("popup");
-    const datePicker = document.getElementById("datePicker");
-
     document.querySelectorAll(".period-btn").forEach(btn => {
       btn.onclick = () => {
         currentPeriod = btn.dataset.period;
@@ -217,6 +212,10 @@
       saveStudentOrderForToday();
       alert("자리 순서가 저장되었습니다.");
     });
+
+    const datePicker = document.getElementById("datePicker");
+    const studentGrid = document.getElementById("studentGrid");
+    const popup = document.getElementById("popup");
 
     datePicker.addEventListener("change", renderStudents);
     datePicker.value = getTodayDate();
