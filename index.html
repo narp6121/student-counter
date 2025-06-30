@@ -34,7 +34,7 @@
 </head>
 <body class="bg-gradient-to-b from-slate-50 to-slate-100 min-h-screen p-4 touch-manipulation">
   <div class="flex justify-between items-center max-w-screen-md mx-auto mb-4">
-    <h1 class="text-xl font-bold text-slate-800">1학년 1반 V0</h1>
+    <h1 class="text-xl font-bold text-slate-800">1학년 1반 v2</h1>
     <div class="flex gap-2 items-center">
       <input type="date" id="datePicker" class="border rounded px-2 py-1 text-sm shadow-sm" />
       <select id="subjectSelect" class="border rounded px-2 py-1 text-sm shadow-sm">
@@ -192,10 +192,9 @@
             dragIndex = null;
           }
         });
-                div.addEventListener("touchstart", (e) => {
+        div.addEventListener("touchstart", (e) => {
           dragIndex = index;
         });
-
         div.addEventListener("touchend", (e) => {
           const touch = e.changedTouches[0];
           const target = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -210,7 +209,6 @@
             }
           }
         });
-
         studentGrid.appendChild(div);
       });
     }
