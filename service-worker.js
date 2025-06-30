@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v8'; // 다음 업데이트 때 'v3', 'v4'로 바꾸기
+const CACHE_VERSION = 'v9'; // 다음 업데이트 때 'v3', 'v4'로 바꾸기
 const CACHE_NAME = `my-cache-${CACHE_VERSION}`;
 const FILES_TO_CACHE = [
   './',
