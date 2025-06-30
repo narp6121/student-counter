@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>1학년 1반 V9 </title>
+  <title>1학년 1반</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
@@ -34,7 +34,7 @@
 </head>
 <body class="bg-gradient-to-b from-slate-50 to-slate-100 min-h-screen p-4 touch-manipulation">
   <div class="flex justify-between items-center max-w-screen-md mx-auto mb-4">
-    <h1 class="text-xl font-bold text-slate-800">1학년 1반</h1>
+    <h1 class="text-xl font-bold text-slate-800">1학년 1반 V0</h1>
     <div class="flex gap-2 items-center">
       <input type="date" id="datePicker" class="border rounded px-2 py-1 text-sm shadow-sm" />
       <select id="subjectSelect" class="border rounded px-2 py-1 text-sm shadow-sm">
@@ -192,6 +192,25 @@
             dragIndex = null;
           }
         });
+                div.addEventListener("touchstart", (e) => {
+          dragIndex = index;
+        });
+
+        div.addEventListener("touchend", (e) => {
+          const touch = e.changedTouches[0];
+          const target = document.elementFromPoint(touch.clientX, touch.clientY);
+          const dropDiv = target.closest("[draggable='true']");
+          if (dropDiv && dropDiv !== div) {
+            const dropIndex = Array.from(studentGrid.children).indexOf(dropDiv);
+            if (dragIndex !== null && dropIndex !== -1 && dragIndex !== dropIndex) {
+              [students[dragIndex], students[dropIndex]] = [students[dropIndex], students[dragIndex]];
+              saveStudentOrderForToday();
+              renderStudents();
+              dragIndex = null;
+            }
+          }
+        });
+
         studentGrid.appendChild(div);
       });
     }
