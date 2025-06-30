@@ -1,57 +1,47 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>1학년 1반 참여도</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
   <style>
-    body { font-family: sans-serif; background: #f0f4f8; padding: 20px; margin: 0; }
-    h1 { text-align: center; margin-bottom: 10px; }
-    .top-controls, .period-buttons { text-align: center; margin-bottom: 15px; }
-    .top-controls input, .period-buttons button, .top-controls button.reset {
-      font-size: 16px; padding: 6px 12px; margin: 4px; border: none; border-radius: 4px; cursor: pointer;
+    .popup {
+      position: absolute;
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 1rem;
+      z-index: 9999;
+      display: none;
+      max-width: 160px;
+      font-size: 0.7rem;
+      white-space: nowrap;
     }
-    .period-buttons button.active { background: #007bff; color: white; }
-    .top-controls button.reset { background: #dc3545; color: white; }
-    .grid-container {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-    @media (max-width: 600px) {
-      .grid-container { grid-template-columns: repeat(3, 1fr); }
-    }
-    .student-card {
-      background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px;
-      display: flex; flex-direction: column; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: move;
-      transition: border 0.3s;
-    }
-    .student-card.unspoken { border: 2px solid #1e90ff; }
-    .name { font-weight: bold; margin-bottom: 10px; }
-    .score-buttons, .score-display {
-      display: flex; gap: 10px; margin-bottom: 5px;
-    }
-    .score-buttons button, .score-display button {
-      flex: 1; padding: 6px; min-width: 50px; font-size: 14px;
-      border: none; border-radius: 4px; cursor: pointer;
-    }
-    .score-display button { background: #e6f0ff; font-weight: bold; }
-    .score-display button:hover { background: #cce0ff; }
   </style>
 </head>
-<body>
-  <h1>1학년 1반 참여도</h1>
-  <div class="top-controls">
-    <input type="date" id="datePicker">
-    <button class="reset" onclick="resetAllScores()">점수 초기화</button>
-    <button style="background:#20c997; color:white;" onclick="sendDataToSheet()">구글 시트로 전송</button>
+<body class="bg-gradient-to-b from-slate-50 to-slate-100 min-h-screen p-4">
+  <div class="flex justify-between items-center max-w-screen-md mx-auto mb-4">
+    <h1 class="text-xl font-bold text-slate-800">1학년 1반 참여도</h1>
+    <div class="flex gap-2 items-center">
+      <input type="date" id="datePicker" class="border rounded px-2 py-1 text-sm shadow-sm" />
+      <select id="subjectSelect" class="border rounded px-2 py-1 text-sm shadow-sm">
+        <option>국어</option><option>수학</option><option>통합</option><option>활동</option><option>기타</option>
+      </select>
+    </div>
   </div>
-  <div class="period-buttons" id="periodButtons"></div>
-  <div class="grid-container" id="studentGrid"></div>
+  <div class="flex justify-center mb-4 gap-1" id="periodTabs">
+    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="1교시">1교시</button>
+    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="2교시">2교시</button>
+    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="3교시">3교시</button>
+    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="4교시">4교시</button>
+    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="5교시">5교시</button>
+    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="전체">전체</button>
+  </div>
+  <div id="studentGrid" class="grid grid-cols-5 gap-3 max-w-screen-md mx-auto"></div>
+  <div id="popup" class="popup"></div>
 
   <script>
     if ('serviceWorker' in navigator) {
@@ -64,193 +54,129 @@
       "김지애", "박지효", "배라은", "이해나", "임재인",
       "정나예", "최이쁨", "한지윤", "김유온", "김주빈",
       "김채우", "나하성", "명승주", "박채민", "신채담",
-      "최서빈", "최여울", "하로아"
-    ];
-    const periods = ["1교시", "2교시", "3교시", "4교시", "5교시", "전체"];
+      "최서빈", "최여울", "하로아"    ];
+
+    const studentGrid = document.getElementById("studentGrid");
+    const popup = document.getElementById("popup");
+    const periodTabs = document.querySelectorAll(".period-btn");
+    const datePicker = document.getElementById("datePicker");
     let currentPeriod = "1교시";
+    let dragIndex = null;
 
-    const dateInput = document.getElementById("datePicker");
-    const grid = document.getElementById("studentGrid");
-    const periodButtons = document.getElementById("periodButtons");
-    dateInput.value = new Date().toISOString().split('T')[0];
-
-    periods.forEach(period => {
-      const btn = document.createElement("button");
-      btn.textContent = period;
-      btn.onclick = () => {
-        currentPeriod = period;
-        document.querySelectorAll(".period-buttons button").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        render();
-      };
-      if (period === currentPeriod) btn.classList.add("active");
-      periodButtons.appendChild(btn);
-    });
-
-    function getSavedOrder() {
-      const saved = localStorage.getItem("seatOrder");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && typeof parsed[0] === 'string') return parsed;
-        } catch (e) {}
-      }
-      return [...defaultStudents];
+    function getStorageKey(date, period) {
+      return `scores_${date}_${period}`;
     }
 
-    function saveOrder(order) {
-      localStorage.setItem("seatOrder", JSON.stringify(order));
+    function getTodayDate() {
+      return datePicker.value || new Date().toISOString().split("T")[0];
     }
 
-    function getKey(name, type, period) {
-      const date = dateInput.value;
-      return `score_${date}_${period}_${name}_${type}`;
+    function loadScores() {
+      const data = localStorage.getItem(getStorageKey(getTodayDate(), currentPeriod));
+      return data ? JSON.parse(data) : students.map(() => ({ 발표: 0, 경청: 0, 지도: 0 }));
     }
 
-    function getScore(name, type) {
-      if (currentPeriod === "전체") {
-        return ["1교시", "2교시", "3교시", "4교시", "5교시"].reduce((sum, p) => {
-          return sum + parseInt(localStorage.getItem(getKey(name, type, p)) || 0);
-        }, 0);
-      } else {
-        return parseInt(localStorage.getItem(getKey(name, type, currentPeriod)) || 0);
-      }
+    function saveScores(scores) {
+      localStorage.setItem(getStorageKey(getTodayDate(), currentPeriod), JSON.stringify(scores));
     }
 
-    function setScore(name, type, value) {
-      if (currentPeriod !== "전체") {
-        localStorage.setItem(getKey(name, type, currentPeriod), value);
-      }
-    }
-
-    function updateDisplay(name) {
-      ["발표", "경청", "지도"].forEach(type => {
-        const score = getScore(name, type);
-        document.getElementById(`${name}_${type}`).textContent = score;
+    function loadTotalScores() {
+      return students.map((_, i) => {
+        let total = { 발표: 0, 경청: 0, 지도: 0 };
+        ["1교시", "2교시", "3교시", "4교시", "5교시"].forEach(p => {
+          const key = getStorageKey(getTodayDate(), p);
+          const scores = JSON.parse(localStorage.getItem(key)) || students.map(() => ({ 발표: 0, 경청: 0, 지도: 0 }));
+          total.발표 += scores[i].발표;
+          total.경청 += scores[i].경청;
+          total.지도 += scores[i].지도;
+        });
+        return total;
       });
     }
 
-    function resetAllScores() {
-      defaultStudents.forEach(name => {
-        ["발표", "경청", "지도"].forEach(type => {
-          if (currentPeriod === "전체") {
-            ["1교시", "2교시", "3교시", "4교시", "5교시"].forEach(p => {
-              localStorage.setItem(getKey(name, type, p), 0);
-            });
-          } else {
-            localStorage.setItem(getKey(name, type, currentPeriod), 0);
+    function openPopup(index, e) {
+      e.stopPropagation();
+      const rect = e.target.getBoundingClientRect();
+      const screenW = window.innerWidth;
+      const popupWidth = 170;
+      popup.style.top = rect.bottom + window.scrollY + "px";
+      popup.style.left = (rect.left + popupWidth > screenW ? rect.right - popupWidth : rect.left) + window.scrollX + "px";
+      popup.style.display = "block";
+      popup.innerHTML = `
+        <h2 class="font-bold text-gray-800 mb-1 text-center truncate">${students[index]}</h2>
+        <div class="flex gap-2 justify-center">
+          <button class="border border-blue-500 text-blue-500 hover:bg-blue-100 px-2 py-1 rounded-md text-xs" onclick="addScore(${index}, '발표')">발표</button>
+          <button class="border border-green-500 text-green-500 hover:bg-green-100 px-2 py-1 rounded-md text-xs" onclick="addScore(${index}, '경청')">경청</button>
+          <button class="border border-red-500 text-red-500 hover:bg-red-100 px-2 py-1 rounded-md text-xs" onclick="addScore(${index}, '지도')">지도</button>
+        </div>
+      `;
+    }
+
+    function addScore(index, type) {
+      const scores = currentPeriod === "전체" ? loadTotalScores() : loadScores();
+      scores[index][type]++;
+      if (currentPeriod !== "전체") saveScores(scores);
+      renderStudents();
+      popup.style.display = "none";
+    }
+
+    function renderStudents() {
+      const scores = currentPeriod === "전체" ? loadTotalScores() : loadScores();
+      studentGrid.innerHTML = "";
+      students.forEach((name, index) => {
+        const data = scores[index];
+        const hasSpokenToday = ["1교시", "2교시", "3교시", "4교시", "5교시"].some(p => {
+          const key = getStorageKey(getTodayDate(), p);
+          const stored = JSON.parse(localStorage.getItem(key));
+          return stored && stored[index].발표 > 0;
+        });
+
+        const baseClass = hasSpokenToday ? "border-blue-100" : "border-blue-300";
+        const div = document.createElement("div");
+        div.className = `rounded-2xl shadow-md p-3 flex flex-col items-center cursor-pointer border-2 transition-all text-sm ${baseClass}`;
+        div.innerHTML = `
+          <div class="font-semibold mb-1 text-center text-gray-800 text-[0.6rem] sm:text-xs truncate">${name}</div>
+          <div class="flex gap-2 font-bold text-sm">
+            <span class="text-blue-600">${data.발표}</span>
+            <span class="text-green-600">${data.경청}</span>
+            <span class="text-red-600">${data.지도}</span>
+          </div>
+        `;
+        div.onclick = (e) => openPopup(index, e);
+        div.setAttribute("draggable", true);
+        div.addEventListener("dragstart", () => dragIndex = index);
+        div.addEventListener("dragover", e => e.preventDefault());
+        div.addEventListener("drop", () => {
+          if (dragIndex !== null && dragIndex !== index) {
+            [students[dragIndex], students[index]] = [students[index], students[dragIndex]];
+            [scores[dragIndex], scores[index]] = [scores[index], scores[dragIndex]];
+            if (currentPeriod !== "전체") saveScores(scores);
+            renderStudents();
+            dragIndex = null;
           }
         });
-      });
-      render();
-    }
-
-    let students = getSavedOrder();
-
-    function render() {
-      grid.innerHTML = "";
-      students.forEach((name, index) => {
-        const card = document.createElement("div");
-        card.className = "student-card";
-        card.setAttribute("draggable", true);
-        card.dataset.index = index;
-        if (getScore(name, "발표") === 0) {
-          card.classList.add("unspoken");
-        }
-
-        card.ondragstart = e => e.dataTransfer.setData("text/plain", index);
-        card.ondragover = e => e.preventDefault();
-        card.ondrop = e => {
-          e.preventDefault();
-          const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
-          const toIndex = parseInt(card.dataset.index);
-          [students[fromIndex], students[toIndex]] = [students[toIndex], students[fromIndex]];
-          saveOrder(students);
-          render();
-        };
-
-        const nameTag = document.createElement("div");
-        nameTag.className = "name";
-        nameTag.textContent = name;
-        card.appendChild(nameTag);
-
-        const btnRow = document.createElement("div");
-        btnRow.className = "score-buttons";
-        ["발표", "경청", "지도"].forEach(type => {
-          const btn = document.createElement("button");
-          btn.textContent = type;
-          btn.style.backgroundColor = type === "발표" ? "#1e90ff" : type === "경청" ? "#28a745" : "#6f42c1";
-          btn.style.color = "white";
-          btn.onclick = () => {
-            const current = getScore(name, type);
-            setScore(name, type, current + 1);
-            updateDisplay(name);
-            render();
-          };
-          btnRow.appendChild(btn);
-        });
-        card.appendChild(btnRow);
-
-        const scoreRow = document.createElement("div");
-        scoreRow.className = "score-display";
-        ["발표", "경청", "지도"].forEach(type => {
-          const scoreBtn = document.createElement("button");
-          scoreBtn.id = `${name}_${type}`;
-          scoreBtn.textContent = getScore(name, type);
-          scoreBtn.onclick = () => {
-            const current = getScore(name, type);
-            if (current > 0) {
-              setScore(name, type, current - 1);
-              updateDisplay(name);
-              render();
-            }
-          };
-          scoreRow.appendChild(scoreBtn);
-        });
-        card.appendChild(scoreRow);
-
-        grid.appendChild(card);
+        studentGrid.appendChild(div);
       });
     }
 
-    // ✅ 구글 시트로 데이터 전송
-    function sendDataToSheet() {
-      const date = document.getElementById("datePicker").value;
-      const students = [...defaultStudents];
-      const endpoint = "https://script.google.com/macros/s/AKfycbyOlzyEgjkvMWniVyz4C6qYoFq2ZskAwQEgYdzqMgm99EgnIHVqd-otS8gu3ocFXfpj/exec";
+    document.querySelectorAll(".period-btn").forEach(btn => {
+      btn.onclick = () => {
+        currentPeriod = btn.dataset.period;
+        document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("bg-blue-500", "text-white"));
+        document.querySelectorAll(".period-btn").forEach(b => b.classList.add("bg-white", "text-gray-700", "border"));
+        btn.classList.remove("bg-white", "text-gray-700", "border");
+        btn.classList.add("bg-blue-500", "text-white");
+        renderStudents();
+      };
+    });
 
-      students.forEach(name => {
-        const 발표 = getScore(name, "발표");
-        const 경청 = getScore(name, "경청");
-        const 지도 = getScore(name, "지도");
+    window.onclick = (e) => {
+      if (!popup.contains(e.target)) popup.style.display = "none";
+    };
 
-        const data = {
-          날짜: date,
-          이름: name,
-          발표,
-          경청,
-          지도,
-        };
-
-        fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-        })
-        .then(res => res.text())
-        .then(result => {
-          console.log("성공:", result);
-        })
-        .catch(err => {
-          console.error("에러:", err);
-        });
-      });
-
-      alert("데이터 전송이 완료되었습니다!");
-    }
-
-    dateInput.addEventListener("change", render);
-    render();
+    datePicker.addEventListener("change", renderStudents);
+    datePicker.value = getTodayDate();
+    renderStudents();
   </script>
 </body>
 </html>
