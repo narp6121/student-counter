@@ -221,10 +221,14 @@
       renderStudents();
     });
 
-    window.onclick = (e) => {
-      const popup = document.getElementById("popup");
-      if (!popup.contains(e.target)) popup.style.display = "none";
-    };
+    function closePopupOnOutsideClick(e) {
+  const popup = document.getElementById("popup");
+  if (popup.style.display === "block" && !popup.contains(e.target)) {
+    popup.style.display = "none";
+  }
+}
+document.addEventListener("click", closePopupOnOutsideClick);
+document.addEventListener("touchstart", closePopupOnOutsideClick);
   </script>
 </body>
 </html>
