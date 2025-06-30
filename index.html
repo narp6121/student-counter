@@ -4,9 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>1학년 1반</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icon.png" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
   <style>
     .popup {
       position: absolute;
@@ -16,9 +14,22 @@
       padding: 1rem;
       z-index: 9999;
       display: none;
-      max-width: 160px;
       font-size: 0.7rem;
-      white-space: nowrap;
+    }
+
+    /* 팝업 버튼 가로 기본 */
+    .popup-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    /* 모바일에서 팝업 버튼 세로로 변경 */
+    @media (max-width: 480px) {
+      .popup-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
     }
 
     @media (max-width: 480px) {
@@ -40,64 +51,31 @@
       <button id="saveOrderBtn" class="border text-xs px-2 py-1 rounded shadow-sm text-gray-600 bg-white">자리 저장</button>
     </div>
   </div>
+
   <div class="flex justify-center mb-4 gap-1 flex-wrap text-xs sm:text-sm" id="periodTabs">
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="1교시">1교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="2교시">2교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="3교시">3교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="4교시">4교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="5교시">5교시</button>
-    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="전체">전체</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="1교시">1교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="2교시">2교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="3교시">3교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="4교시">4교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="5교시">5교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm bg-white text-gray-700 border text-[0.6rem] sm:text-xs" data-period="전체">전체</button>
   </div>
 
   <div id="studentGrid" class="grid grid-cols-5 gap-3 max-w-screen-md mx-auto"></div>
   <div id="popup" class="popup"></div>
 
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js');
-      });
-    }
-
-    let students = [];
+    let students = [
+      "김지애", "박지효", "배라은", "이해나", "임재인",
+      "정나예", "최이쁨", "한지윤", "김유온", "김주빈",
+      "김채우", "나하성", "명승주", "박채민", "신채담",
+      "최서빈", "최여울", "하로아"
+    ];
     let currentPeriod = "1교시";
     let dragIndex = null;
 
     function getTodayDate() {
-      return datePicker.value || new Date().toISOString().split("T")[0];
-    }
-
-    function getStudentOrderHistory() {
-      return JSON.parse(localStorage.getItem("student_order_history") || "[]");
-    }
-
-    function setStudentOrderHistory(history) {
-      localStorage.setItem("student_order_history", JSON.stringify(history));
-    }
-
-    function loadStudents() {
-      const today = getTodayDate();
-      const history = getStudentOrderHistory();
-      const applicable = history.filter(h => h.date <= today).pop();
-      if (applicable) {
-        students = applicable.order;
-      } else {
-        students = [
-          "김지애", "박지효", "배라은", "이해나", "임재인",
-          "정나예", "최이쁨", "한지윤", "김유온", "김주빈",
-          "김채우", "나하성", "명승주", "박채민", "신채담",
-          "최서빈", "최여울", "하로아"
-        ];
-      }
-    }
-
-    function saveStudentOrderForToday() {
-      const today = getTodayDate();
-      let history = getStudentOrderHistory();
-      history = history.filter(h => h.date !== today);
-      history.push({ date: today, order: students });
-      history.sort((a, b) => new Date(a.date) - new Date(b.date));
-      setStudentOrderHistory(history);
+      return document.getElementById("datePicker").value || new Date().toISOString().split("T")[0];
     }
 
     function getStorageKey(date, period) {
@@ -128,19 +106,14 @@
     }
 
     function openPopup(index, e) {
-      e.stopPropagation();
-      const rect = e.target.getBoundingClientRect();
       const popup = document.getElementById("popup");
-      const popupWidth = 160;
-      const screenRightEdge = window.innerWidth;
-      const overflows = rect.left + popupWidth > screenRightEdge;
-
+      const rect = e.target.getBoundingClientRect();
       popup.style.top = rect.bottom + window.scrollY + "px";
-      popup.style.left = (overflows ? rect.right - popupWidth : rect.left) + window.scrollX + "px";
+      popup.style.left = rect.left + window.scrollX + "px";
       popup.style.display = "block";
       popup.innerHTML = `
-        <h2 class="font-bold text-gray-800 mb-1 text-center truncate">${students[index]}</h2>
-        <div class="grid grid-cols-1 gap-2">
+        <h2 class="font-bold text-gray-800 mb-2 text-center truncate">${students[index]}</h2>
+        <div class="popup-buttons">
           <button onclick="addScore(${index}, '발표')" class="border border-blue-500 text-blue-500 hover:bg-blue-100 px-2 py-1 rounded-md text-xs">발표</button>
           <button onclick="addScore(${index}, '경청')" class="border border-green-500 text-green-500 hover:bg-green-100 px-2 py-1 rounded-md text-xs">경청</button>
           <button onclick="addScore(${index}, '지도')" class="border border-red-500 text-red-500 hover:bg-red-100 px-2 py-1 rounded-md text-xs">지도</button>
@@ -153,43 +126,37 @@
       scores[index][type]++;
       if (currentPeriod !== "전체") saveScores(scores);
       renderStudents();
-      popup.style.display = "none";
+      document.getElementById("popup").style.display = "none";
     }
 
     function renderStudents() {
-      loadStudents();
       const scores = currentPeriod === "전체" ? loadTotalScores() : loadScores();
-      studentGrid.innerHTML = "";
-      students.forEach((name, index) => {
-        const data = scores[index];
-        const hasSpokenToday = ["1교시", "2교시", "3교시", "4교시", "5교시"].some(p => {
-          const stored = JSON.parse(localStorage.getItem(getStorageKey(getTodayDate(), p)));
-          return stored && stored[index].발표 > 0;
-        });
-        const baseClass = hasSpokenToday ? "border-blue-100" : "border-blue-300";
+      const grid = document.getElementById("studentGrid");
+      grid.innerHTML = "";
+      students.forEach((name, i) => {
+        const s = scores[i];
         const div = document.createElement("div");
-        div.className = `rounded-2xl shadow-md p-3 flex flex-col items-center cursor-pointer border-2 transition-all text-sm ${baseClass}`;
+        div.className = "rounded-2xl shadow-md p-3 flex flex-col items-center cursor-pointer border-2 transition text-sm border-blue-300";
         div.innerHTML = `
           <div class="font-semibold mb-1 text-center text-gray-800 text-[0.6rem] sm:text-xs truncate">${name}</div>
           <div class="flex gap-2 font-bold text-sm">
-            <span class="text-blue-600">${data.발표}</span>
-            <span class="text-green-600">${data.경청}</span>
-            <span class="text-red-600">${data.지도}</span>
+            <span class="text-blue-600">${s.발표}</span>
+            <span class="text-green-600">${s.경청}</span>
+            <span class="text-red-600">${s.지도}</span>
           </div>
         `;
-        div.onclick = (e) => openPopup(index, e);
+        div.onclick = (e) => openPopup(i, e);
         div.setAttribute("draggable", true);
-        div.addEventListener("dragstart", () => dragIndex = index);
+        div.addEventListener("dragstart", () => dragIndex = i);
         div.addEventListener("dragover", e => e.preventDefault());
         div.addEventListener("drop", () => {
-          if (dragIndex !== null && dragIndex !== index) {
-            [students[dragIndex], students[index]] = [students[index], students[dragIndex]];
-            saveStudentOrderForToday();
+          if (dragIndex !== null && dragIndex !== i) {
+            [students[dragIndex], students[i]] = [students[i], students[dragIndex]];
             renderStudents();
             dragIndex = null;
           }
         });
-        studentGrid.appendChild(div);
+        grid.appendChild(div);
       });
     }
 
@@ -197,28 +164,25 @@
       btn.onclick = () => {
         currentPeriod = btn.dataset.period;
         document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("bg-blue-500", "text-white"));
-        document.querySelectorAll(".period-btn").forEach(b => b.classList.add("bg-white", "text-gray-700", "border"));
-        btn.classList.remove("bg-white", "text-gray-700", "border");
+        document.querySelectorAll(".period-btn").forEach(b => b.classList.add("bg-white", "text-gray-700"));
+        btn.classList.remove("bg-white", "text-gray-700");
         btn.classList.add("bg-blue-500", "text-white");
         renderStudents();
       };
     });
 
+    document.getElementById("saveOrderBtn").onclick = () => {
+      alert("자리 저장은 아직 구현되지 않았어요.");
+    };
+
+    document.getElementById("datePicker").value = getTodayDate();
+    document.getElementById("datePicker").onchange = renderStudents;
+
     window.onclick = (e) => {
+      const popup = document.getElementById("popup");
       if (!popup.contains(e.target)) popup.style.display = "none";
     };
 
-    document.getElementById("saveOrderBtn").addEventListener("click", () => {
-      saveStudentOrderForToday();
-      alert("자리 순서가 저장되었습니다.");
-    });
-
-    const datePicker = document.getElementById("datePicker");
-    const studentGrid = document.getElementById("studentGrid");
-    const popup = document.getElementById("popup");
-
-    datePicker.addEventListener("change", renderStudents);
-    datePicker.value = getTodayDate();
     renderStudents();
   </script>
 </body>
