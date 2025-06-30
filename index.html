@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>1학년 1반 참여도</title>
+  <title>1학년 1반</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
@@ -20,29 +20,37 @@
       font-size: 0.7rem;
       white-space: nowrap;
     }
+
+    @media (max-width: 480px) {
+      #periodTabs button {
+        font-size: 0.65rem;
+        padding: 0.25rem 0.5rem;
+      }
+    }
   </style>
 </head>
 <body class="bg-gradient-to-b from-slate-50 to-slate-100 min-h-screen p-4">
   <div class="flex justify-between items-center max-w-screen-md mx-auto mb-4">
-    <h1 class="text-xl font-bold text-slate-800">1학년 1반 참여도</h1>
+    <h1 class="text-xl font-bold text-slate-800">1학년 1반</h1>
     <div class="flex gap-2 items-center">
       <input type="date" id="datePicker" class="border rounded px-2 py-1 text-sm shadow-sm" />
       <select id="subjectSelect" class="border rounded px-2 py-1 text-sm shadow-sm">
         <option>국어</option><option>수학</option><option>통합</option><option>활동</option><option>기타</option>
       </select>
+      <button id="saveOrderBtn" class="border text-xs px-2 py-1 rounded shadow-sm text-gray-600 bg-white">자리 저장</button>
     </div>
   </div>
-  <div class="flex justify-center mb-4 gap-1" id="periodTabs">
-    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="1교시">1교시</button>
-    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="2교시">2교시</button>
-    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="3교시">3교시</button>
-    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="4교시">4교시</button>
-    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="5교시">5교시</button>
-    <button class="period-btn px-3 py-1 rounded-md text-sm font-medium shadow-sm transition bg-white text-gray-700 border" data-period="전체">전체</button>
+  <div class="flex justify-center mb-4 gap-1 flex-wrap text-xs sm:text-sm" id="periodTabs">
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="1교시">1교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="2교시">2교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="3교시">3교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="4교시">4교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="5교시">5교시</button>
+    <button class="period-btn px-3 py-1 rounded-md font-medium shadow-sm transition bg-white text-gray-700 border" data-period="전체">전체</button>
   </div>
   <div id="studentGrid" class="grid grid-cols-5 gap-3 max-w-screen-md mx-auto"></div>
   <div id="popup" class="popup"></div>
-
+  
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -52,21 +60,28 @@
   </script>
 
   <script>
-
-       let students = [];
+    let students = [];
+    let currentPeriod = "1교시";
+    let dragIndex = null;
 
     function getTodayDate() {
       return datePicker.value || new Date().toISOString().split("T")[0];
     }
 
-    function getStudentOrderKey(date) {
-      return `student_order_${date}`;
+    function getStudentOrderHistory() {
+      return JSON.parse(localStorage.getItem("student_order_history") || "[]");
+    }
+
+    function setStudentOrderHistory(history) {
+      localStorage.setItem("student_order_history", JSON.stringify(history));
     }
 
     function loadStudents() {
-      const saved = localStorage.getItem(getStudentOrderKey(getTodayDate()));
-      if (saved) {
-        students = JSON.parse(saved);
+      const today = getTodayDate();
+      const history = getStudentOrderHistory();
+      const applicable = history.filter(h => h.date <= today).pop();
+      if (applicable) {
+        students = applicable.order;
       } else {
         students = [
           "김지애", "박지효", "배라은", "이해나", "임재인",
@@ -77,8 +92,13 @@
       }
     }
 
-    function saveStudentOrder() {
-      localStorage.setItem(getStudentOrderKey(getTodayDate()), JSON.stringify(students));
+    function saveStudentOrderForToday() {
+      const today = getTodayDate();
+      let history = getStudentOrderHistory();
+      history = history.filter(h => h.date !== today);
+      history.push({ date: today, order: students });
+      history.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setStudentOrderHistory(history);
     }
 
     function getStorageKey(date, period) {
@@ -111,17 +131,15 @@
     function openPopup(index, e) {
       e.stopPropagation();
       const rect = e.target.getBoundingClientRect();
-      const screenW = window.innerWidth;
-      const popupWidth = 170;
       popup.style.top = rect.bottom + window.scrollY + "px";
-      popup.style.left = (rect.left + popupWidth > screenW ? rect.right - popupWidth : rect.left) + window.scrollX + "px";
+      popup.style.left = rect.left + window.scrollX + "px";
       popup.style.display = "block";
       popup.innerHTML = `
         <h2 class="font-bold text-gray-800 mb-1 text-center truncate">${students[index]}</h2>
         <div class="flex gap-2 justify-center">
-          <button class="border border-blue-500 text-blue-500 hover:bg-blue-100 px-2 py-1 rounded-md text-xs" onclick="addScore(${index}, '발표')">발표</button>
-          <button class="border border-green-500 text-green-500 hover:bg-green-100 px-2 py-1 rounded-md text-xs" onclick="addScore(${index}, '경청')">경청</button>
-          <button class="border border-red-500 text-red-500 hover:bg-red-100 px-2 py-1 rounded-md text-xs" onclick="addScore(${index}, '지도')">지도</button>
+          <button onclick="addScore(${index}, '발표')" class="border border-blue-500 text-blue-500 hover:bg-blue-100 px-2 py-1 rounded-md text-xs">발표</button>
+          <button onclick="addScore(${index}, '경청')" class="border border-green-500 text-green-500 hover:bg-green-100 px-2 py-1 rounded-md text-xs">경청</button>
+          <button onclick="addScore(${index}, '지도')" class="border border-red-500 text-red-500 hover:bg-red-100 px-2 py-1 rounded-md text-xs">지도</button>
         </div>
       `;
     }
@@ -141,11 +159,9 @@
       students.forEach((name, index) => {
         const data = scores[index];
         const hasSpokenToday = ["1교시", "2교시", "3교시", "4교시", "5교시"].some(p => {
-          const key = getStorageKey(getTodayDate(), p);
-          const stored = JSON.parse(localStorage.getItem(key));
+          const stored = JSON.parse(localStorage.getItem(getStorageKey(getTodayDate(), p)));
           return stored && stored[index].발표 > 0;
         });
-
         const baseClass = hasSpokenToday ? "border-blue-100" : "border-blue-300";
         const div = document.createElement("div");
         div.className = `rounded-2xl shadow-md p-3 flex flex-col items-center cursor-pointer border-2 transition-all text-sm ${baseClass}`;
@@ -164,9 +180,7 @@
         div.addEventListener("drop", () => {
           if (dragIndex !== null && dragIndex !== index) {
             [students[dragIndex], students[index]] = [students[index], students[dragIndex]];
-            [scores[dragIndex], scores[index]] = [scores[index], scores[dragIndex]];
-            saveStudentOrder();
-            if (currentPeriod !== "전체") saveScores(scores);
+            saveStudentOrderForToday();
             renderStudents();
             dragIndex = null;
           }
@@ -177,10 +191,7 @@
 
     const studentGrid = document.getElementById("studentGrid");
     const popup = document.getElementById("popup");
-    const periodTabs = document.querySelectorAll(".period-btn");
     const datePicker = document.getElementById("datePicker");
-    let currentPeriod = "1교시";
-    let dragIndex = null;
 
     document.querySelectorAll(".period-btn").forEach(btn => {
       btn.onclick = () => {
@@ -197,10 +208,14 @@
       if (!popup.contains(e.target)) popup.style.display = "none";
     };
 
+    document.getElementById("saveOrderBtn").addEventListener("click", () => {
+      saveStudentOrderForToday();
+      alert("자리 순서가 저장되었습니다.");
+    });
+
     datePicker.addEventListener("change", renderStudents);
     datePicker.value = getTodayDate();
     renderStudents();
   </script>
 </body>
 </html>
-
