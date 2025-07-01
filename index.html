@@ -30,11 +30,35 @@
       outline: 3px solid #60a5fa;
       outline-offset: 2px;
     }
+    button.student-card {
+      appearance: none;
+      -webkit-appearance: none;
+      background: white;
+      border: 2px solid #93c5fd;
+      border-radius: 1rem;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: move;
+      font-size: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    button.student-card .name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    button.student-card .score {
+      display: flex;
+      gap: 0.5rem;
+      font-weight: bold;
+      font-size: 0.75rem;
+    }
   </style>
 </head>
 <body class="bg-gradient-to-b from-slate-50 to-slate-100 min-h-screen p-4 touch-manipulation">
   <div class="flex justify-between items-center max-w-screen-md mx-auto mb-4">
-    <h1 class="text-xl font-bold text-slate-800">1학년 1반 v3</h1>
+    <h1 class="text-xl font-bold text-slate-800">1학년 1반 v4</h1>
     <div class="flex gap-2 items-center">
       <input type="date" id="datePicker" class="border rounded px-2 py-1 text-sm shadow-sm" />
       <select id="subjectSelect" class="border rounded px-2 py-1 text-sm shadow-sm">
@@ -57,17 +81,9 @@
   <div id="popup" class="popup"></div>
 
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js');
-      });
-    }
-
     const defaultStudents = ["김지애", "박지효", "배라은", "이해나", "임재인", "정나예", "최이쁨", "한지윤", "김유온", "김주빈", "김채우", "나하성", "명승주", "박채민", "신채담", "최서빈", "최여울", "하로아"];
     let students = getSavedOrder();
     let currentPeriod = "전체";
-    let selectedCard = null;
-    let dragIndex = null;
 
     function getSavedOrder() {
       const saved = localStorage.getItem("seatOrder");
@@ -119,6 +135,43 @@
       });
     }
 
+    function renderStudents() {
+      const scores = currentPeriod === "전체" ? loadTotalScores() : loadScores();
+      const studentGrid = document.getElementById("studentGrid");
+      studentGrid.innerHTML = "";
+      students.forEach((name, index) => {
+        const data = scores[index];
+        const button = document.createElement("button");
+        button.className = "student-card";
+        button.setAttribute("draggable", true);
+        button.dataset.index = index;
+        button.innerHTML = `
+          <div class="name">${name}</div>
+          <div class="score">
+            <span class="text-blue-600">${data.발표}</span>
+            <span class="text-green-600">${data.경청}</span>
+            <span class="text-red-600">${data.지도}</span>
+          </div>
+        `;
+        button.onclick = (e) => openPopup(index, e);
+        button.ondragstart = (e) => {
+          e.dataTransfer.setData("text/plain", index);
+        };
+        button.ondragover = (e) => e.preventDefault();
+        button.ondrop = (e) => {
+          e.preventDefault();
+          const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
+          const toIndex = parseInt(button.dataset.index);
+          const temp = students[fromIndex];
+          students[fromIndex] = students[toIndex];
+          students[toIndex] = temp;
+          saveStudentOrder();
+          renderStudents();
+        };
+        studentGrid.appendChild(button);
+      });
+    }
+
     function openPopup(index, e) {
       e.stopPropagation();
       const rect = e.currentTarget.getBoundingClientRect();
@@ -144,72 +197,7 @@
       document.getElementById("popup").style.display = "none";
     }
 
-    function renderStudents() {
-      const scores = currentPeriod === "전체" ? loadTotalScores() : loadScores();
-      const studentGrid = document.getElementById("studentGrid");
-      studentGrid.innerHTML = "";
-      students.forEach((name, index) => {
-        const data = scores[index];
-        const hasSpokenToday = ["1교시", "2교시", "3교시", "4교시", "5교시"].some(p => {
-          const stored = JSON.parse(localStorage.getItem(getStorageKey(getTodayDate(), p)));
-          return stored && stored[index].발표 > 0;
-        });
-        const baseClass = hasSpokenToday ? "border-blue-100" : "border-blue-300";
-        const div = document.createElement("div");
-        div.className = `rounded-2xl shadow-md p-3 flex flex-col items-center cursor-pointer border-2 transition-all text-sm ${baseClass}`;
-        div.innerHTML = `
-          <div class="font-semibold mb-1 text-center text-gray-800 text-[0.6rem] sm:text-xs truncate">${name}</div>
-          <div class="flex gap-2 font-bold text-sm">
-            <span class="text-blue-600">${data.발표}</span>
-            <span class="text-green-600">${data.경청}</span>
-            <span class="text-red-600">${data.지도}</span>
-          </div>
-        `;
-        div.onclick = (e) => openPopup(index, e);
-        div.setAttribute("draggable", true);
-
-        div.addEventListener("dragstart", () => dragIndex = index);
-        div.addEventListener("dragover", e => e.preventDefault());
-        div.addEventListener("drop", () => {
-          if (dragIndex !== null && dragIndex !== index) {
-            [students[dragIndex], students[index]] = [students[index], students[dragIndex]];
-            saveStudentOrder();
-            renderStudents();
-            dragIndex = null;
-          }
-        });
-
-        // 아이패드용 터치 드래그
-        div.addEventListener("touchstart", (e) => {
-          dragIndex = index;
-        });
-        div.addEventListener("touchend", (e) => {
-          const touch = e.changedTouches[0];
-          const target = document.elementFromPoint(touch.clientX, touch.clientY);
-          const dropDiv = target.closest("[draggable='true']");
-          if (dropDiv && dropDiv !== div) {
-            const dropIndex = Array.from(studentGrid.children).indexOf(dropDiv);
-            if (dragIndex !== null && dropIndex !== -1 && dragIndex !== dropIndex) {
-              [students[dragIndex], students[dropIndex]] = [students[dropIndex], students[dragIndex]];
-              saveStudentOrder();
-              renderStudents();
-              dragIndex = null;
-            }
-          }
-        });
-
-        studentGrid.appendChild(div);
-      });
-    }
-
-    // 팝업 외부 클릭 시 닫기
     document.addEventListener("click", (e) => {
-      const popup = document.getElementById("popup");
-      if (popup.style.display === "block" && !popup.contains(e.target)) {
-        popup.style.display = "none";
-      }
-    });
-    document.addEventListener("touchstart", (e) => {
       const popup = document.getElementById("popup");
       if (popup.style.display === "block" && !popup.contains(e.target)) {
         popup.style.display = "none";
